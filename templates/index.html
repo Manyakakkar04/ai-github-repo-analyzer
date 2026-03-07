@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI GitHub Repository Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI GitHub Repository Analyzer</h1>
+            <p>Enter a GitHub repository URL to analyze project structure, tech stack, health score, and get code suggestions.</p>
+        </header>
+
+        <section class="input-section">
+            <form id="analyze-form">
+                <label for="repo-url">GitHub Repository URL</label>
+                <input
+                    type="text"
+                    id="repo-url"
+                    name="url"
+                    placeholder="https://github.com/pallets/flask"
+                    required
+                >
+                <button type="submit" id="analyze-btn">Analyze</button>
+            </form>
+        </section>
+
+        <div id="loading" class="loading hidden">
+            <span>Fetching repository data...</span>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="results" class="results hidden">
+            <!-- Repository Overview -->
+            <section class="result-section repo-overview">
+                <h2>Repository Overview</h2>
+                <div id="repo-overview" class="card"></div>
+            </section>
+
+            <!-- Tech Stack -->
+            <section class="result-section">
+                <h2>Tech Stack</h2>
+                <div id="tech-stack" class="tech-badges"></div>
+            </section>
+
+            <!-- Health Score -->
+            <section class="result-section">
+                <h2>Repository Health Score</h2>
+                <div id="health-score" class="card"></div>
+                <div id="health-suggestions" class="suggestions"></div>
+            </section>
+
+            <!-- File List and Analysis -->
+            <section class="result-section">
+                <h2>File Analysis</h2>
+                <label for="file-select">Select a file to analyze:</label>
+                <select id="file-select" disabled>
+                    <option value="">-- Select a file --</option>
+                </select>
+                <div id="file-analysis" class="card hidden"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        document.getElementById("analyze-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const url = document.getElementById("repo-url").value.trim();
+            const loading = document.getElementById("loading");
+            const error = document.getElementById("error");
+            const results = document.getElementById("results");
+
+            error.classList.add("hidden");
+            results.classList.add("hidden");
+            loading.classList.remove("hidden");
+
+            try {
+                const res = await fetch("/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Analysis failed");
+                }
+
+                currentData = data;
+                displayResults(data);
+                results.classList.remove("hidden");
+            } catch (err) {
+                error.textContent = err.message || "An error occurred";
+                error.classList.remove("hidden");
+            } finally {
+                loading.classList.add("hidden");
+            }
+        });
+
+        function displayResults(data) {
+            const ri = data.repo_info;
+            document.getElementById("repo-overview").innerHTML = `
+                <p><strong>${ri.full_name || ri.name}</strong></p>
+                <p>${ri.description}</p>
+                <p>Stars: ${ri.stars} | Forks: ${ri.forks} | Language: ${ri.language}</p>
+            `;
+
+            document.getElementById("tech-stack").innerHTML = data.tech_stack
+                .map((t) => `<span class="badge">${t}</span>`)
+                .join("");
+
+            const health = data.health;
+            const scoreClass = health.score >= 75 ? "good" : health.score >= 50 ? "medium" : "low";
+            document.getElementById("health-score").innerHTML = `
+                <p class="score ${scoreClass}">${health.score}/100</p>
+            `;
+            document.getElementById("health-suggestions").innerHTML = health.suggestions.length
+                ? health.suggestions.map((s) => `<p class="suggestion">• ${s}</p>`).join("")
+                : "<p>All checks passed!</p>";
+
+            const select = document.getElementById("file-select");
+            select.innerHTML = '<option value="">-- Select a file --</option>';
+            data.file_list.forEach((f) => {
+                const opt = document.createElement("option");
+                opt.value = f.path;
+                opt.textContent = f.path;
+                select.appendChild(opt);
+            });
+            select.disabled = false;
+            select.onchange = onFileSelect;
+            document.getElementById("file-analysis").classList.add("hidden");
+        }
+
+        async function onFileSelect() {
+            const path = document.getElementById("file-select").value;
+            if (!path || !currentData) return;
+
+            const analysisEl = document.getElementById("file-analysis");
+            analysisEl.innerHTML = "<p>Loading analysis...</p>";
+            analysisEl.classList.remove("hidden");
+
+            try {
+                const res = await fetch("/analyze-file", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        owner: currentData.owner,
+                        repo: currentData.repo,
+                        path,
+                        branch: currentData.branch,
+                    }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "File analysis failed");
+                }
+
+                let html = `<p><strong>File:</strong> ${path}</p>`;
+                html += `<p><strong>Lines:</strong> ${data.line_count}${data.is_large ? " (large file)" : ""}</p>`;
+                html += "<h3>Explanation</h3><ul>";
+                data.explanation.forEach((e) => {
+                    html += `<li>${escapeHtml(e)}</li>`;
+                });
+                html += "</ul>";
+                html += "<h3>Suggestions</h3><ul>";
+                data.suggestions.forEach((s) => {
+                    html += `<li>${escapeHtml(s)}</li>`;
+                });
+                html += "</ul>";
+                if (data.debug_prints && data.debug_prints.length > 0) {
+                    html += "<h3>Debug Prints</h3><ul>";
+                    data.debug_prints.forEach((d) => {
+                        html += `<li>Line ${d.line_num}: ${escapeHtml(d.line)}</li>`;
+                    });
+                    html += "</ul>";
+                }
+                if (data.possible_secrets && data.possible_secrets.length > 0) {
+                    html += "<h3>Possible Secrets</h3><ul>";
+                    data.possible_secrets.forEach((s) => {
+                        html += `<li>Line ${s.line_num}: ${escapeHtml(s.match)}</li>`;
+                    });
+                    html += "</ul>";
+                }
+                if (data.api_without_try && data.api_without_try.length > 0) {
+                    html += "<h3>API Calls Without Try/Catch</h3><ul>";
+                    data.api_without_try.forEach((a) => {
+                        html += `<li>Line ${a.line_num}: ${escapeHtml(a.line)}</li>`;
+                    });
+                    html += "</ul>";
+                }
+                analysisEl.innerHTML = html;
+            } catch (err) {
+                analysisEl.innerHTML = `<p class="error-text">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
