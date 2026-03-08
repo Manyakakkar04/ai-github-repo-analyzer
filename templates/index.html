@@ -1,100 +1,234 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI GitHub Repository Analyzer</title>
-    <!-- Bootstrap (CDN) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons (CDN) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Keep existing stylesheet (doesn't affect JS IDs) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI GitHub Repository Analyzer</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body class="bg-light">
-    <div class="container py-5">
-        <!-- Header -->
-        <header class="text-center mb-4">
-            <h1 class="fw-bold mb-2">AI GitHub Repository Analyzer</h1>
-            <p class="text-secondary mb-0">
-                Analyze GitHub repositories to understand tech stack, health score, and file-level insights.
-            </p>
-        </header>
 
-        <!-- Search Section -->
-        <section class="mb-4">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
-                    <form id="analyze-form">
-                        <label for="repo-url" class="form-label fw-semibold">GitHub Repository URL</label>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-12 col-lg-9">
-                                <input
-                                    type="text"
-                                    id="repo-url"
-                                    name="url"
-                                    class="form-control form-control-lg"
-                                    placeholder="https://github.com/pallets/flask"
-                                    required
-                                >
-                            </div>
-                            <div class="col-12 col-lg-3 d-grid">
-                                <button type="submit" id="analyze-btn" class="btn btn-dark btn-lg">
-                                    <i class="bi bi-search me-2"></i>
-                                    Analyze Repository
-                                </button>
-                            </div>
-                        </div>
-                        <div class="form-text mt-2">
-                            Tip: Add a <code>GITHUB_TOKEN</code> in <code>.env</code> to increase rate limits.
-                        </div>
-                    </form>
+<div class="container py-5">
+
+<header class="text-center mb-4">
+<h1 class="fw-bold mb-2">AI GitHub Repository Analyzer</h1>
+<p class="text-secondary">
+Analyze GitHub repositories to understand tech stack, health score, and file-level insights.
+</p>
+</header>
+
+
+<!-- ================= REPO ANALYZER ================= -->
+
+  <!-- Search Section -->
+  <section class="mb-4">
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-4">
+            <form id="analyze-form">
+                <label for="repo-url" class="form-label fw-semibold">GitHub Repository URL</label>
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-lg-9">
+                        <input
+                            type="text"
+                            id="repo-url"
+                            name="url"
+                            class="form-control form-control-lg"
+                            placeholder="https://github.com/pallets/flask"
+                            required
+                        >
+                    </div>
+                    <div class="col-12 col-lg-3 d-grid">
+                        <button type="submit" id="analyze-btn" class="btn btn-dark btn-lg">
+                            <i class="bi bi-search me-2"></i>
+                            Analyze Repository
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </section>
+                <div class="form-text mt-2">
+                    Tip: Add a <code>GITHUB_TOKEN</code> in <code>.env</code> to increase rate limits.
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
 
-        <!-- Loading / Error -->
-        <div id="loading" class="text-center py-3 hidden">
-            <div class="d-inline-flex align-items-center gap-2">
-                <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
-                <span class="text-secondary">Fetching repository data...</span>
+<!-- Loading / Error -->
+<div id="loading" class="text-center py-3 hidden">
+    <div class="d-inline-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+        <span class="text-secondary">Fetching repository data...</span>
+    </div>
+</div>
+
+<div id="error" class="alert alert-danger shadow-sm hidden" role="alert"></div>
+
+<!-- Results Dashboard -->
+<div id="results" class="hidden">
+    <div class="row g-4">
+        <!-- Repository Overview -->
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h2 class="h5 mb-0 fw-semibold">Repository Overview</h2>
+                        <span class="badge text-bg-light border">
+                            <i class="bi bi-github me-1"></i>
+                            GitHub
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div id="repo-overview"></div>
+                </div>
             </div>
         </div>
 
-        <div id="error" class="alert alert-danger shadow-sm hidden" role="alert"></div>
-
-        <!-- Results Dashboard -->
-        <div id="results" class="hidden">
-            <div class="row g-4">
-                <!-- Repository Overview -->
-                <div class="col-12">
-                    <div class="card shadow-sm border-0 rounded-4">
-                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h2 class="h5 mb-0 fw-semibold">Repository Overview</h2>
-                                <span class="badge text-bg-light border">
-                                    <i class="bi bi-github me-1"></i>
-                                    GitHub
-                                </span>
-                            </div>
-                        </div>
-                        <div class="card-body px-4 pb-4">
-                            <div id="repo-overview"></div>
-                        </div>
-                    </div>
+        <!-- Tech Stack -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                    <h2 class="h5 mb-0 fw-semibold">Tech Stack</h2>
                 </div>
+                <div class="card-body px-4 pb-4">
+                    <div id="tech-stack" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
 
-                <!-- Tech Stack -->
+        <!-- Health Score -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                    <h2 class="h5 mb-0 fw-semibold">Repository Health Score</h2>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div id="health-score"></div>
+                    <div id="health-suggestions" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+ <!-- File Analysis -->
+ <div class="col-12">
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+            <h2 class="h5 mb-0 fw-semibold">File Analysis</h2>
+        </div>
+        <div class="card-body px-4 pb-4">
+            <div class="row g-3 align-items-end">
                 <div class="col-12 col-lg-6">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
-                            <h2 class="h5 mb-0 fw-semibold">Tech Stack</h2>
-                        </div>
-                        <div class="card-body px-4 pb-4">
-                            <div id="tech-stack" class="d-flex flex-wrap gap-2"></div>
-                        </div>
+                    <label for="file-select" class="form-label fw-semibold">Select a file</label>
+                    <select id="file-select" class="form-select" disabled>
+                        <option value="">-- Select a file --</option>
+                    </select>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="text-secondary small">
+                        Choose a file to see explanation and suggestions (debug prints, secrets, missing try/catch, large files).
                     </div>
                 </div>
+            </div>
+            
+            <div class="mt-4">
+                <div id="file-analysis" class="card border-0 shadow-sm rounded-4 hidden">
+                    <div class="card-body p-4" id="file-analysis-body">
+                        <!-- content injected by JS into #file-analysis -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= PR ANALYZER ================= -->
+
+<section class="mb-4">
+
+<div class="card shadow-sm border-0 rounded-4">
+
+<div class="card-body p-4">
+
+<h5 class="fw-semibold mb-3">
+<i class="bi bi-git me-2"></i>
+Pull Request Analyzer
+</h5>
+
+<form id="pr-form">
+
+<div class="row g-3">
+
+<div class="col-lg-9">
+<input
+type="text"
+id="pr-url"
+class="form-control form-control-lg"
+placeholder="https://github.com/user/repo/pull/123"
+required>
+</div>
+
+<div class="col-lg-3 d-grid">
+<button type="submit" class="btn btn-primary btn-lg">
+Analyze PR
+</button>
+</div>
+
+</div>
+
+</form>
+
+<div id="pr-result" class="mt-4"></div>
+
+</div>
+</div>
+
+</section>
+
+
+<div id="loading" class="text-center py-3 d-none">
+<div class="spinner-border text-primary"></div>
+</div>
+
+<div id="error" class="alert alert-danger d-none"></div>
+
+
+<!-- RESULTS -->
+
+<div id="results" class="d-none">
+
+<div class="row g-4">
+
+
+<div class="col-12">
+<div class="card shadow-sm border-0 rounded-4">
+<div class="card-header bg-white border-0">
+<h5 class="mb-0">Repository Overview</h5>
+</div>
+
+<div class="card-body">
+<div id="repo-overview"></div>
+</div>
+</div>
+</div>
+
+
+<div class="col-lg-6">
+<div class="card shadow-sm border-0 rounded-4">
+<div class="card-header bg-white border-0">
+<h5 class="mb-0">Tech Stack</h5>
+</div>
+
+<div class="card-body">
+<div id="tech-stack"></div>
+</div>
+</div>
+</div>
+
 
                 <!-- Health Score -->
                 <div class="col-12 col-lg-6">
@@ -108,47 +242,25 @@
                         </div>
                     </div>
                 </div>
+                          
+                
 
-                <!-- File Analysis -->
-                <div class="col-12">
-                    <div class="card shadow-sm border-0 rounded-4">
-                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
-                            <h2 class="h5 mb-0 fw-semibold">File Analysis</h2>
-                        </div>
-                        <div class="card-body px-4 pb-4">
-                            <div class="row g-3 align-items-end">
-                                <div class="col-12 col-lg-6">
-                                    <label for="file-select" class="form-label fw-semibold">Select a file</label>
-                                    <select id="file-select" class="form-select" disabled>
-                                        <option value="">-- Select a file --</option>
-                                    </select>
-                                </div>
-                                <div class="col-12 col-lg-6">
-                                    <div class="text-secondary small">
-                                        Choose a file to see explanation and suggestions (debug prints, secrets, missing try/catch, large files).
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div class="mt-4">
-                                <div id="file-analysis" class="card border-0 shadow-sm rounded-4 hidden">
-                                    <div class="card-body p-4" id="file-analysis-body">
-                                        <!-- content injected by JS into #file-analysis -->
-                                    </div>
-                                </div>
-                            </div>
+</div>
+</div>
 
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
 
-    <script>
-        let currentData = null;
 
-        document.getElementById("analyze-form").addEventListener("submit", async (e) => {
+<script>
+
+let currentData = null
+
+
+/* ================= REPO ANALYZER ================= */
+
+
+document.getElementById("analyze-form").addEventListener("submit", async (e) => {
             e.preventDefault();
             const url = document.getElementById("repo-url").value.trim();
             const loading = document.getElementById("loading");
@@ -181,7 +293,7 @@
                 loading.classList.add("hidden");
             }
         });
-
+        //
         function displayResults(data) {
             const ri = data.repo_info;
             document.getElementById("repo-overview").innerHTML = `
@@ -251,8 +363,8 @@
             select.onchange = onFileSelect;
             document.getElementById("file-analysis").classList.add("hidden");
         }
-
-        async function onFileSelect() {
+//
+async function onFileSelect() {
             const path = document.getElementById("file-select").value;
             if (!path || !currentData) return;
 
@@ -356,14 +468,52 @@
                 `;
             }
         }
+        //
 
-        function escapeHtml(text) {
+
+/* ================= PR ANALYZER ================= */
+
+document.getElementById("pr-form").addEventListener("submit", async (e)=>{
+
+e.preventDefault()
+
+const pr_url=document.getElementById("pr-url").value
+
+try{
+
+const res=await fetch("/analyze-pr",{
+
+method:"POST",
+
+headers:{"Content-Type":"application/json"},
+
+body:JSON.stringify({pr_url})
+
+})
+
+const data=await res.json()
+
+document.getElementById("pr-result").innerHTML=
+
+`<pre>${JSON.stringify(data,null,2)}</pre>`
+
+}catch(err){
+
+document.getElementById("pr-result").innerHTML="PR analysis failed"
+
+}
+
+})
+function escapeHtml(text) {
             const div = document.createElement("div");
             div.textContent = text;
             return div.innerHTML;
         }
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>
