@@ -4,64 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI GitHub Repository Analyzer</title>
+    <!-- Bootstrap (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Keep existing stylesheet (doesn't affect JS IDs) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>AI GitHub Repository Analyzer</h1>
-            <p>Enter a GitHub repository URL to analyze project structure, tech stack, health score, and get code suggestions.</p>
+<body class="bg-light">
+    <div class="container py-5">
+        <!-- Header -->
+        <header class="text-center mb-4">
+            <h1 class="fw-bold mb-2">AI GitHub Repository Analyzer</h1>
+            <p class="text-secondary mb-0">
+                Analyze GitHub repositories to understand tech stack, health score, and file-level insights.
+            </p>
         </header>
 
-        <section class="input-section">
-            <form id="analyze-form">
-                <label for="repo-url">GitHub Repository URL</label>
-                <input
-                    type="text"
-                    id="repo-url"
-                    name="url"
-                    placeholder="https://github.com/pallets/flask"
-                    required
-                >
-                <button type="submit" id="analyze-btn">Analyze</button>
-            </form>
+        <!-- Search Section -->
+        <section class="mb-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <form id="analyze-form">
+                        <label for="repo-url" class="form-label fw-semibold">GitHub Repository URL</label>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-lg-9">
+                                <input
+                                    type="text"
+                                    id="repo-url"
+                                    name="url"
+                                    class="form-control form-control-lg"
+                                    placeholder="https://github.com/pallets/flask"
+                                    required
+                                >
+                            </div>
+                            <div class="col-12 col-lg-3 d-grid">
+                                <button type="submit" id="analyze-btn" class="btn btn-dark btn-lg">
+                                    <i class="bi bi-search me-2"></i>
+                                    Analyze Repository
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            Tip: Add a <code>GITHUB_TOKEN</code> in <code>.env</code> to increase rate limits.
+                        </div>
+                    </form>
+                </div>
+            </div>
         </section>
 
-        <div id="loading" class="loading hidden">
-            <span>Fetching repository data...</span>
+        <!-- Loading / Error -->
+        <div id="loading" class="text-center py-3 hidden">
+            <div class="d-inline-flex align-items-center gap-2">
+                <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                <span class="text-secondary">Fetching repository data...</span>
+            </div>
         </div>
 
-        <div id="error" class="error hidden"></div>
+        <div id="error" class="alert alert-danger shadow-sm hidden" role="alert"></div>
 
-        <div id="results" class="results hidden">
-            <!-- Repository Overview -->
-            <section class="result-section repo-overview">
-                <h2>Repository Overview</h2>
-                <div id="repo-overview" class="card"></div>
-            </section>
+        <!-- Results Dashboard -->
+        <div id="results" class="hidden">
+            <div class="row g-4">
+                <!-- Repository Overview -->
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h2 class="h5 mb-0 fw-semibold">Repository Overview</h2>
+                                <span class="badge text-bg-light border">
+                                    <i class="bi bi-github me-1"></i>
+                                    GitHub
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body px-4 pb-4">
+                            <div id="repo-overview"></div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Tech Stack -->
-            <section class="result-section">
-                <h2>Tech Stack</h2>
-                <div id="tech-stack" class="tech-badges"></div>
-            </section>
+                <!-- Tech Stack -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                            <h2 class="h5 mb-0 fw-semibold">Tech Stack</h2>
+                        </div>
+                        <div class="card-body px-4 pb-4">
+                            <div id="tech-stack" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Health Score -->
-            <section class="result-section">
-                <h2>Repository Health Score</h2>
-                <div id="health-score" class="card"></div>
-                <div id="health-suggestions" class="suggestions"></div>
-            </section>
+                <!-- Health Score -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                            <h2 class="h5 mb-0 fw-semibold">Repository Health Score</h2>
+                        </div>
+                        <div class="card-body px-4 pb-4">
+                            <div id="health-score"></div>
+                            <div id="health-suggestions" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- File List and Analysis -->
-            <section class="result-section">
-                <h2>File Analysis</h2>
-                <label for="file-select">Select a file to analyze:</label>
-                <select id="file-select" disabled>
-                    <option value="">-- Select a file --</option>
-                </select>
-                <div id="file-analysis" class="card hidden"></div>
-            </section>
+                <!-- File Analysis -->
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card-header bg-white border-0 rounded-top-4 py-3 px-4">
+                            <h2 class="h5 mb-0 fw-semibold">File Analysis</h2>
+                        </div>
+                        <div class="card-body px-4 pb-4">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-12 col-lg-6">
+                                    <label for="file-select" class="form-label fw-semibold">Select a file</label>
+                                    <select id="file-select" class="form-select" disabled>
+                                        <option value="">-- Select a file --</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <div class="text-secondary small">
+                                        Choose a file to see explanation and suggestions (debug prints, secrets, missing try/catch, large files).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div id="file-analysis" class="card border-0 shadow-sm rounded-4 hidden">
+                                    <div class="card-body p-4" id="file-analysis-body">
+                                        <!-- content injected by JS into #file-analysis -->
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -105,23 +185,59 @@
         function displayResults(data) {
             const ri = data.repo_info;
             document.getElementById("repo-overview").innerHTML = `
-                <p><strong>${ri.full_name || ri.name}</strong></p>
-                <p>${ri.description}</p>
-                <p>Stars: ${ri.stars} | Forks: ${ri.forks} | Language: ${ri.language}</p>
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="fs-5 fw-semibold">
+                            <i class="bi bi-repo me-2 text-secondary"></i>
+                            ${escapeHtml(ri.full_name || ri.name || "")}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge text-bg-light border">
+                                <i class="bi bi-star-fill text-warning me-1"></i>
+                                ${ri.stars} Stars
+                            </span>
+                            <span class="badge text-bg-light border">
+                                <i class="bi bi-diagram-2 me-1"></i>
+                                ${ri.forks} Forks
+                            </span>
+                            <span class="badge text-bg-light border">
+                                <i class="bi bi-code-slash me-1"></i>
+                                ${escapeHtml(ri.language || "Unknown")}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-secondary">
+                        ${escapeHtml(ri.description || "No description")}
+                    </div>
+                </div>
             `;
 
             document.getElementById("tech-stack").innerHTML = data.tech_stack
-                .map((t) => `<span class="badge">${t}</span>`)
+                .map((t) => `<span class="badge text-bg-light border rounded-pill px-3 py-2"><i class="bi bi-boxes me-1 text-secondary"></i>${escapeHtml(t)}</span>`)
                 .join("");
 
             const health = data.health;
-            const scoreClass = health.score >= 75 ? "good" : health.score >= 50 ? "medium" : "low";
+            const score = Number(health.score || 0);
+            const barClass = score >= 75 ? "bg-success" : score >= 50 ? "bg-warning" : "bg-danger";
             document.getElementById("health-score").innerHTML = `
-                <p class="score ${scoreClass}">${health.score}/100</p>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="fw-semibold">Score</div>
+                    <div class="fw-bold">${score}/100</div>
+                </div>
+                <div class="progress" role="progressbar" aria-label="Repository health score" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar ${barClass}" style="width: ${Math.max(0, Math.min(100, score))}%"></div>
+                </div>
             `;
-            document.getElementById("health-suggestions").innerHTML = health.suggestions.length
-                ? health.suggestions.map((s) => `<p class="suggestion">• ${s}</p>`).join("")
-                : "<p>All checks passed!</p>";
+            document.getElementById("health-suggestions").innerHTML = (health.suggestions && health.suggestions.length)
+                ? `
+                    <div class="mt-3">
+                        <div class="fw-semibold mb-2">Suggestions</div>
+                        <ul class="mb-0">
+                            ${health.suggestions.map((s) => `<li class="text-secondary">${escapeHtml(s)}</li>`).join("")}
+                        </ul>
+                    </div>
+                `
+                : `<div class="mt-3 alert alert-success mb-0"><i class="bi bi-check-circle me-2"></i>All checks passed!</div>`;
 
             const select = document.getElementById("file-select");
             select.innerHTML = '<option value="">-- Select a file --</option>';
@@ -141,7 +257,14 @@
             if (!path || !currentData) return;
 
             const analysisEl = document.getElementById("file-analysis");
-            analysisEl.innerHTML = "<p>Loading analysis...</p>";
+            analysisEl.innerHTML = `
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-2 text-secondary">
+                        <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                        <span>Loading analysis...</span>
+                    </div>
+                </div>
+            `;
             analysisEl.classList.remove("hidden");
 
             try {
@@ -161,42 +284,76 @@
                     throw new Error(data.error || "File analysis failed");
                 }
 
-                let html = `<p><strong>File:</strong> ${path}</p>`;
-                html += `<p><strong>Lines:</strong> ${data.line_count}${data.is_large ? " (large file)" : ""}</p>`;
-                html += "<h3>Explanation</h3><ul>";
-                data.explanation.forEach((e) => {
-                    html += `<li>${escapeHtml(e)}</li>`;
-                });
-                html += "</ul>";
-                html += "<h3>Suggestions</h3><ul>";
-                data.suggestions.forEach((s) => {
-                    html += `<li>${escapeHtml(s)}</li>`;
-                });
-                html += "</ul>";
+                const lineMeta = `${data.line_count}${data.is_large ? " (large file)" : ""}`;
+
+                let html = `
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="fw-semibold">
+                                <i class="bi bi-file-earmark-code me-2 text-secondary"></i>
+                                ${escapeHtml(path)}
+                            </div>
+                            <span class="badge text-bg-light border">
+                                <i class="bi bi-list-ol me-1"></i>
+                                ${escapeHtml(lineMeta)}
+                            </span>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-12 col-lg-6">
+                                <div class="fw-semibold mb-2">Explanation</div>
+                                <ul class="mb-0">
+                                    ${(data.explanation || []).map((e) => `<li class="text-secondary">${escapeHtml(e)}</li>`).join("")}
+                                </ul>
+                            </div>
+                            <div class="col-12 col-lg-6">
+                                <div class="fw-semibold mb-2">Suggestions</div>
+                                <ul class="mb-0">
+                                    ${(data.suggestions || []).map((s) => `<li class="text-secondary">${escapeHtml(s)}</li>`).join("")}
+                                </ul>
+                            </div>
+                        </div>
+                `;
+
                 if (data.debug_prints && data.debug_prints.length > 0) {
-                    html += "<h3>Debug Prints</h3><ul>";
-                    data.debug_prints.forEach((d) => {
-                        html += `<li>Line ${d.line_num}: ${escapeHtml(d.line)}</li>`;
-                    });
-                    html += "</ul>";
+                    html += `
+                        <hr class="my-4">
+                        <div class="fw-semibold mb-2"><i class="bi bi-bug me-2 text-secondary"></i>Debug Prints</div>
+                        <ul class="mb-0">
+                            ${data.debug_prints.map((d) => `<li class="text-secondary">Line ${d.line_num}: <code>${escapeHtml(d.line)}</code></li>`).join("")}
+                        </ul>
+                    `;
                 }
                 if (data.possible_secrets && data.possible_secrets.length > 0) {
-                    html += "<h3>Possible Secrets</h3><ul>";
-                    data.possible_secrets.forEach((s) => {
-                        html += `<li>Line ${s.line_num}: ${escapeHtml(s.match)}</li>`;
-                    });
-                    html += "</ul>";
+                    html += `
+                        <hr class="my-4">
+                        <div class="fw-semibold mb-2"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Possible Secrets</div>
+                        <ul class="mb-0">
+                            ${data.possible_secrets.map((s) => `<li class="text-secondary">Line ${s.line_num}: <code>${escapeHtml(s.match)}</code></li>`).join("")}
+                        </ul>
+                    `;
                 }
                 if (data.api_without_try && data.api_without_try.length > 0) {
-                    html += "<h3>API Calls Without Try/Catch</h3><ul>";
-                    data.api_without_try.forEach((a) => {
-                        html += `<li>Line ${a.line_num}: ${escapeHtml(a.line)}</li>`;
-                    });
-                    html += "</ul>";
+                    html += `
+                        <hr class="my-4">
+                        <div class="fw-semibold mb-2"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>API Calls Without Try/Catch</div>
+                        <ul class="mb-0">
+                            ${data.api_without_try.map((a) => `<li class="text-secondary">Line ${a.line_num}: <code>${escapeHtml(a.line)}</code></li>`).join("")}
+                        </ul>
+                    `;
                 }
+
+                html += `</div>`;
                 analysisEl.innerHTML = html;
             } catch (err) {
-                analysisEl.innerHTML = `<p class="error-text">${escapeHtml(err.message)}</p>`;
+                analysisEl.innerHTML = `
+                    <div class="card-body p-4">
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-x-circle me-2"></i>
+                            ${escapeHtml(err.message || "File analysis failed")}
+                        </div>
+                    </div>
+                `;
             }
         }
 
@@ -206,5 +363,7 @@
             return div.innerHTML;
         }
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
