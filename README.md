@@ -13,7 +13,6 @@ Analyze GitHub repositories and pull requests to understand tech stack, reposito
 - [Project Structure](#project-structure)  
 - [Future Improvements](#future-improvements)  
 - [Contributing](#contributing)  
-- [License](#license)  
 
 ---
 
